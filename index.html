@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centrum Dowodzenia Feliksa 🚀</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-dark: #0f172a;
+  --bg-card: #1e293b;
+  --bg-card-hover: #273548;
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+  --accent-glow: rgba(245, 158, 11, 0.3);
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --sale-zabaw: #8b5cf6;
+  --place-zabaw: #22d3ee;
+  --muzea: #34d399;
+  --teatry: #f472b6;
+  --zwierzeta: #a78bfa;
+  --inne: #fb923c;
+  --kawiarnie: #fbbf24;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Nunito', 'Inter', sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 2px solid rgba(245, 158, 11, 0.2);
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1000;
+  height: 72px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-light), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+}
+
+.logo-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.logo-emoji {
+  font-size: 32px;
+  -webkit-text-fill-color: initial;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Search */
+.search-box {
+  display: flex;
+  align-items: center;
+  background: var(--bg-dark);
+  border: 1px solid #334155;
+  border-radius: 50px;
+  padding: 8px 18px;
+  gap: 10px;
+  min-width: 260px;
+  transition: border-color 0.25s;
+}
+
+.search-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.search-box input {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+}
+
+.search-box input::placeholder { color: #64748b; }
+
+.count-badge {
+  background: var(--accent);
+  color: #1e293b;
+  border-radius: 50px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Layout */
+.layout {
+  display: flex;
+  height: calc(100vh - 72px);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 380px;
+  min-width: 380px;
+  background: var(--bg-card);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.filter-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-btn {
+  padding: 5px 14px;
+  border-radius: 50px;
+  border: 1.5px solid #334155;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-light);
+}
+
+.filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1e293b;
+  font-weight: 700;
+}
+
+/* Places list */
+.places-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.places-list::-webkit-scrollbar {
+  width: 4px;
+}
+.places-list::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 10px;
+}
+
+.place-item {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  margin-bottom: 4px;
+}
+
+.place-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.place-item.active {
+  background: var(--bg-card-hover);
+  border-left-color: var(--accent);
+}
+
+.place-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.place-item-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.place-item-cat {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 50px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.place-item-desc {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Category badge colors */
+.cat-sale_zabaw { background: rgba(139,92,246,0.2); color: #a78bfa; border-left-color: var(--sale-zabaw); }
+.cat-place_zabaw { background: rgba(34,211,238,0.15); color: #67e8f9; border-left-color: var(--place-zabaw); }
+.cat-muzea { background: rgba(52,211,153,0.15); color: #6ee7b7; border-left-color: var(--muzea); }
+.cat-teatry { background: rgba(244,114,182,0.15); color: #f9a8d4; border-left-color: var(--teatry); }
+.cat-zwierzeta { background: rgba(167,139,250,0.15); color: #c4b5fd; border-left-color: var(--zwierzeta); }
+.cat-inne { background: rgba(251,146,60,0.15); color: #fdba74; border-left-color: var(--inne); }
+.cat-kawiarnie { background: rgba(251,191,36,0.15); color: #fcd34d; border-left-color: var(--kawiarnie); }
+
+/* Map */
+.map-container {
+  flex: 1;
+  position: relative;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  background: #0f172a !important;
+  font-family: 'Nunito', sans-serif !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #1e293b !important;
+  color: var(--text) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.leaflet-popup-tip {
+  background: #1e293b !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.leaflet-popup-content {
+  margin: 14px 16px !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  min-width: 220px;
+}
+
+.popup-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.popup-cat {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 10px;
+  border-radius: 50px;
+  margin-bottom: 8px;
+}
+
+.popup-desc {
+  color: #cbd5e1;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.popup-dir-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  color: #1e293b;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Nunito', sans-serif;
+  border: none;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.popup-dir-btn:hover {
+  background: var(--accent-light);
+  transform: translateY(-1px);
+}
+
+/* Custom marker icons */
+.custom-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border: 3px solid rgba(255,255,255,0.6);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  transition: transform 0.2s;
+}
+
+.custom-marker:hover {
+  transform: scale(1.15);
+}
+
+/* Legend */
+.map-legend {
+  position: absolute;
+  bottom: 24px;
+  right: 16px;
+  background: rgba(30,41,59,0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px 16px;
+  z-index: 1000;
+  min-width: 150px;
+}
+
+.legend-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Stats bar */
+.stats-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-chip {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-weight: 600;
+}
+
+.stat-chip strong { color: var(--text); }
+
+/* Responsive */
+@media (max-width: 860px) {
+  .sidebar {
+    width: 100%;
+    min-width: auto;
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .layout {
+    flex-direction: column;
+  }
+  .header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
+    gap: 8px;
+  }
+  .search-box {
+    min-width: 150px;
+    flex: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    max-height: 40vh;
+  }
+  .search-box {
+    min-width: 0;
+    width: 100%;
+  }
+  .count-badge { display: none; }
+}
+
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important;
+}
+
+.leaflet-control-zoom a {
+  background: #1e293b !important;
+  color: var(--text) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #273548 !important;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <span class="logo">
+      <span class="logo-emoji">🚀</span> Centrum Dowodzenia Feliksa
+    </span>
+    <span class="logo-sub">| Miejsca dla dzieci w Warszawie</span>
+  </div>
+  <div class="header-right">
+    <div class="search-box">
+      <span style="color:#64748b;">🔍</span>
+      <input type="text" id="searchInput" placeholder="Szukaj miejsca..." oninput="filterPlaces()">
+    </div>
+    <span class="count-badge" id="countBadge">59 miejsc</span>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="filter-title">📍 Kategorie</div>
+      <div class="filters" id="filters">
+        <button class="filter-btn active" data-cat="all" onclick="setFilter('all')">🏁 Wszystkie</button>
+        <button class="filter-btn" data-cat="sale_zabaw" onclick="setFilter('sale_zabaw')">🎪 Sale Zabaw</button>
+        <button class="filter-btn" data-cat="place_zabaw" onclick="setFilter('place_zabaw')">🛝 Place Zabaw</button>
+        <button class="filter-btn" data-cat="muzea" onclick="setFilter('muzea')">🔬 Muzea</button>
+        <button class="filter-btn" data-cat="teatry" onclick="setFilter('teatry')">🎭 Teatry</button>
+        <button class="filter-btn" data-cat="zwierzeta" onclick="setFilter('zwierzeta')">🐘 Zwierzęta</button>
+        <button class="filter-btn" data-cat="kawiarnie" onclick="setFilter('kawiarnie')">☕ Kawiarnie</button>
+        <button class="filter-btn" data-cat="inne" onclick="setFilter('inne')">🎡 Inne</button>
+      </div>
+      <div class="stats-bar" id="statsBar" style="margin-top:8px;"></div>
+    </div>
+    <div class="places-list" id="placesList"></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="legend-title">Legenda</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--sale-zabaw)"></span> Sale Zabaw</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--place-zabaw)"></span> Place Zabaw</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--muzea)"></span> Muzea</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--teatry)"></span> Teatry</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--zwierzeta)"></span> Zwierzęta</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--inne)"></span> Inne</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--kawiarnie)"></span> Kawiarnie</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ===== DATA =====
+const PLACES = [{"name": "Smart Kids Planet", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2324352, "lon": 20.9911537, "address": "Smart Kids Planet, Edwarda Luckefielda, Fabryka Norblina, Mirów, Wola, Warszawa, województwo mazowieckie, 00-841, Polska", "desc": "Ogromna sala zabaw z wieloma strefami tematycznymi — sensoryka, konstrukcje, eksperymenty. Dla dzieci 0-10 lat. 🧠"}, {"name": "Bawialnia Dziupla", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.3410665, "lon": 21.0523904, "address": "Dziupla, Naturalna bawialnia, 9, Luciana Pavarottiego, Greenwood I, Kobiałka, Białołęka, Warszawa, województwo mazowieck", "desc": "Przytulna bawialnia z naturalnymi materiałami, drewnianymi zabawkami i kącikiem do odpoczynku. Kameralna atmosfera. 🪵"}, {"name": "Lumo sala zabaw", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2134, "lon": 21.0053, "address": "Lumo sala zabaw", "desc": "Nowoczesna sala zabaw z interaktywnymi projekcjami, świetlnymi instalacjami i strefami sensorycznymi. ✨"}, {"name": "Sensorysie", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2034471, "lon": 21.0213907, "address": "Sensorysie, 8, Różana, Stary Mokotów, Mokotów, Warszawa, województwo mazowieckie, 02-548, Polska", "desc": "Sala zabaw nastawiona na integrację sensoryczną — baseny z kulkami, ścianki wspinaczkowe, tory przeszkód. 🎯"}, {"name": "Hultajka sala zabaw", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2521504, "lon": 21.0332728, "address": "Hultajka, 6, Floriańska, Skaryszew, Stara Praga, Praga-Północ, Warszawa, województwo mazowieckie, 03-707, Polska", "desc": "Przestronna sala zabaw z ogromną konstrukcją do wspinania, zjeżdżalniami i basenem z kulkami. 🏰"}, {"name": "Minicity", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2559411, "lon": 21.0441028, "address": "Minicity, Pasaż Konesera, Koneser, Szmulowizna, Praga-Północ, Warszawa, województwo mazowieckie, 03-736, Polska", "desc": "Miasteczko edukacyjne, gdzie dzieci wcielają się w zawody — strażak, lekarz, kucharz. Zabawa i nauka! 👩‍🚒"}, {"name": "Klockownia", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.25, "lon": 21.0421, "address": "Klockownia", "desc": "Raj dla małych budowniczych — tysiące klocków, konstrukcje, warsztaty. LEGO, blocki, kreatywna zabawa! 🧱"}, {"name": "Airo", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.1755, "lon": 21.0108, "address": "Airo", "desc": "Nowoczesny park trampolin i strefa aktywności — skoki, akrobacje, tory przeszkód. Dla energicznych dzieciaków. 🤸"}, {"name": "Jungle Academy", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2241881, "lon": 20.9249358, "address": "Jungle Academy, Połczyńska, Ulrychów, Wola, Warszawa, województwo mazowieckie, 01-378, Polska", "desc": "Park przygód z dżunglą lin, ściankami wspinaczkowymi i przeszkodami. Dla odważnych odkrywców! 🦍"}, {"name": "Inka play blue city", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2204, "lon": 20.9764, "address": "Inka play blue city", "desc": "Sala zabaw w Blue City — strefa malucha, zjeżdżalnie, baseny, ścianka wspinaczkowa. 🎪"}, {"name": "Łazienki Królewskie — wodny plac zabaw", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2126209, "lon": 21.0339496, "address": "Łazienki Królewskie, Śródmieście, Warszawa, województwo mazowieckie, 00-460, Polska", "desc": "Unikalny wodny plac zabaw przy Starej Oranżerii — strumyki, śluzy, pompki. Pałac na wodzie i przyroda. 🌊"}, {"name": "Plac zabaw w Parku Ujazdowskim", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2220389, "lon": 21.0257926, "address": "Park Ujazdowski, Śródmieście, Warszawa, województwo mazowieckie, 00-461, Polska", "desc": "Duży, nowoczesny plac zabaw w ścisłym centrum — zjeżdżalnie, huśtawki, karuzele, piaskownica. 🌳"}, {"name": "Wodny plac zabaw Wawer", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2400698, "lon": 21.1522941, "address": "1, Starego Doktora, Marysin Wawerski Północny, Marysin Wawerski, Wawer, Warszawa, województwo mazowieckie, 04-551, Polsk", "desc": "Plac zabaw z kurtynami wodnymi, pompkami i tamami. Przy ul. Starego Doktora 1. Idealny na upały! 💦"}, {"name": "Plac zabaw Ursynów dinozaury", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1596, "lon": 21.0457, "address": "Plac zabaw Ursynów dinozaury", "desc": "Kultowy plac zabaw z ogromnym dinozaurem! Liny, zjeżdżalnie — atrakcja dla małych paleontologów. 🦕"}, {"name": "Powsin plac zabaw", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1301728, "lon": 21.1139372, "address": "Rosochaty Park, Rosochata, Zamość, Powsin, Wilanów, Warszawa, województwo mazowieckie, 02-998, Polska", "desc": "Rozległy plac zabaw w Parku Powsin — nowe urządzenia, zjeżdżalnie, huśtawki, domek do wspinania. 🌲"}, {"name": "Plac zabaw przy Kinowej", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2430989, "lon": 21.0780621, "address": "Ulica Grenadierów, Grenadierów, Grochów-Kinowa, Grochów, Praga-Południe, Warszawa, województwo mazowieckie, 04-016, Pols", "desc": "Spokojny plac zabaw przy ul. Kinowej — dobra opcja dla młodszych dzieci w zielonej okolicy. 🏡"}, {"name": "Plac zabaw plac Wilsona", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2692619, "lon": 20.9844973, "address": "Plac Wilsona, Juliusza Słowackiego, Żoliborz Spółdzielczy, Stary Żoliborz, Żoliborz, Warszawa, województwo mazowieckie, ", "desc": "Popularny plac zabaw na Żoliborzu — dobra infrastruktura, dużo zieleni, rodzinna atmosfera. 🌻"}, {"name": "Pruszków plac zabaw Niepodległości", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1620811, "lon": 20.8045971, "address": "Aleja Niepodległości, Żbików, Pruszków, powiat pruszkowski, województwo mazowieckie, 05-803, Polska", "desc": "Duży, nowoczesny plac zabaw przy al. Niepodległości w Pruszkowie. Dla dzieci w różnym wieku. 🛝"}, {"name": "Proszę słonia Bielany", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2825947, "lon": 20.9335975, "address": "Stawy Brustmana, Wawrzyszew, Bielany, Warszawa, województwo mazowieckie, Polska", "desc": "Plac zabaw przy stawach Brustmana — drewniana konstrukcja, natura, zieleń. Idealny na spacer z zabawą. 🐘"}, {"name": "Szałas z drewna Otwock", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1112, "lon": 21.2629, "address": "Szałas z drewna Otwock", "desc": "Drewniana konstrukcja szałasu — nietypowy, kreatywny plac zabaw z naturalnych materiałów. 🪵"}, {"name": "Plac zabaw Park Leśny Otwock", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.113, "lon": 21.2785, "address": "Plac zabaw Park Leśny Otwock", "desc": "Plac zabaw w lesie przy ul. Szkolnej 22. Świeże powietrze, otoczenie lasu, natura. 🌿"}, {"name": "Plac zabaw Park Młociński", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.3147504, "lon": 20.9267183, "address": "Park Młociński, Warszawa, województwo mazowieckie, Polska", "desc": "Plac zabaw w największym lesie Warszawy — połącz spacer z zabawą na świeżym powietrzu. 🍃"}, {"name": "Plac zabaw BCEK Bielany", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2903788, "lon": 20.9416543, "address": "Bielańskie Centrum Edukacji Kulturalnej, 9a, Szegedyńska, Brzeziny, Wrzeciono, Bielany, Warszawa, województwo mazowiecki", "desc": "Nowoczesny plac zabaw przy Bielańskim Centrum Edukacji Kulturalnej. Elementy edukacyjne na zewnątrz. 📚"}, {"name": "Bielany osiołek UKSW", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2962891, "lon": 20.958375, "address": "UKSW, Dewajtis, Las Bielański, Bielany, Warszawa, województwo mazowieckie, 01-815, Polska", "desc": "Drewniany plac zabaw przy UKSW z charakterystycznym osiołkiem. Dla okolicznych mieszkańców. 🐴"}, {"name": "Sulejówek plac zabaw Szklarniowa", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2284433, "lon": 21.2606098, "address": "Szklarniowa, Osiedle Kasztanowa, Ratajewo, Sulejówek, powiat miński, województwo mazowieckie, 05-070, Polska", "desc": "Nowoczesny plac zabaw w Sulejówku przy ul. Szklarniowej. Zielona i spokojna okolica. 🌳"}, {"name": "Centrum Nauki Kopernik", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.241776, "lon": 21.0286002, "address": "Centrum Nauki Kopernik, 20, Wybrzeże Kościuszkowskie, Powiśle-Skarpa, Powiśle, Śródmieście, Warszawa, województwo mazowi", "desc": "Największe centrum nauki w Polsce! Interaktywne wystawy, planetarium, warsztaty. Obowiązkowe! 🔬"}, {"name": "Muzeum Iluzji", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2494363, "lon": 21.0116788, "address": "Muzeum Świat Iluzji, 21, Rynek Starego Miasta, Staromiejskie, Stare Miasto, Śródmieście, Warszawa, województwo mazowieck", "desc": "Triki optyczne, złudzenia i eksperymenty ze światłem. Fascynujące dla dzieci i dorosłych. 🎭"}, {"name": "Muzeum Historii Naturalnej PKiN", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2319, "lon": 21.0067, "address": "Muzeum Historii Naturalnej PKiN", "desc": "Szkielety dinozaurów, minerały i meteoryty w Pałacu Kultury i Nauki. Dla małych odkrywców! 🦖"}, {"name": "Muzeum Geologiczne", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2100299, "lon": 21.0126094, "address": "Muzeum Geologiczne, 4, Rakowiecka, Osiedle Batorego, Stary Mokotów, Mokotów, Warszawa, województwo mazowieckie, 02-518, ", "desc": "Skały, skamieniałości, diamenty, wulkany. Przy ul. Rakowieckiej. Wstęp wolny! 💎"}, {"name": "MSN warsztaty", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2331288, "lon": 21.0089838, "address": "Muzeum Sztuki Nowoczesnej, 103, Marszałkowska, Żelazna Brama, Śródmieście Północne, Śródmieście, Warszawa, województwo m", "desc": "Muzeum Sztuki Nowoczesnej — warsztaty rodzinne, zajęcia plastyczne. Rozwija kreatywność dzieci. 🎨"}, {"name": "Muzeum Narodowe warsztaty", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2316938, "lon": 21.0247708, "address": "Muzeum Narodowe w Warszawie, 3, Aleje Jerozolimskie, Powiśle-Solec, Śródmieście Południowe, Śródmieście, Warszawa, wojew", "desc": "Warsztaty rodzinne i oprowadzania dla dzieci wśród arcydzieł. Edukacja przez sztukę. 🖼️"}, {"name": "Król Maciuś Polin", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2493716, "lon": 20.9931609, "address": "Muzeum Historii Żydów Polskich Polin, 6, Mordechaja Anielewicza, Muranów, Śródmieście, Warszawa, województwo mazowieckie", "desc": "Przestrzeń edukacyjna w Muzeum Polin — warsztaty, opowieści i zabawa. Mądra rozrywka. 📖"}, {"name": "Ścieżka Kampinos", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.3167, "lon": 20.5667, "address": "Ścieżka Kampinos", "desc": "Ścieżka edukacyjna w Puszczy Kampinoskiej — punkty obserwacyjne, tablice, natura w najlepszym wydaniu. 🦌"}, {"name": "Teatr Niewielki", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2324224, "lon": 21.1062545, "address": "teatr niewielki, Ostrobramska, Grochów-Południowy, Gocław, Praga-Południe, Warszawa, województwo mazowieckie, 04-175, Po", "desc": "Kameralny teatr dla dzieci z autorskimi spektaklami i interaktywnymi przedstawieniami. Małe grupy. 🎭"}, {"name": "Teatr Małego Widza", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2496936, "lon": 21.0139633, "address": "Teatr Małego Widza, 4, Jezuicka, Staromiejskie, Stare Miasto, Śródmieście, Warszawa, województwo mazowieckie, 00-281, Po", "desc": "Dedykowany najmłodszym (1-6 lat) — sensoryczne spektakle, bliski kontakt z aktorami. ❤️"}, {"name": "Teatr Baj", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2524956, "lon": 21.0346245, "address": "Baj, 28, Jagiellońska, Skaryszew, Stara Praga, Praga-Północ, Warszawa, województwo mazowieckie, 03-719, Polska", "desc": "Legendarny teatr lalek — jeden z najstarszych w Polsce. Klasyczne i współczesne spektakle. 🧸"}, {"name": "Teatr Guliwer", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.203278, "lon": 21.0197937, "address": "Guliwer, 16, Różana, Stary Mokotów, Mokotów, Warszawa, województwo mazowieckie, 02-548, Polska", "desc": "Teatr lalek z bogatym repertuarem. Piękne scenografie, mądre przedstawienia, przystępne ceny. 🎪"}, {"name": "Roma spektakle dla dzieci", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2274112, "lon": 21.0078118, "address": "Teatr Muzyczny \"Roma\", 49, Nowogrodzka, Koszyki, Śródmieście Południowe, Śródmieście, Warszawa, województwo mazowieckie,", "desc": "Musicale i spektakle na dużej scenie. Profesjonalna oprawa i niezapomniane przeżycia. 🌟"}, {"name": "Smykofonia", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2328, "lon": 21.021, "address": "Smykofonia", "desc": "Koncerty muzyczne dla dzieci — od klasyki po jazz. Dzieci grają, śpiewają i tańczą! 🎵"}, {"name": "Kleks magia kina", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2308, "lon": 21.0106, "address": "Kleks magia kina", "desc": "Interaktywne seanse filmowe, warsztaty animacji, kreatywne podejście do kina. 🎬"}, {"name": "Zoo Warszawa", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.2526292, "lon": 21.0296653, "address": "Park Praski 01, Aleja „Solidarności”, Praga I, Nowa Praga, Praga-Północ, Warszawa, województwo mazowieckie, 03-401, Pols", "desc": "Ogród Zoologiczny im. Żabińskich — słonie, żyrafy, foki, małpy. Klasyk warszawskich wycieczek! 🐘"}, {"name": "Mini zoo Ursus", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.1877389, "lon": 20.8909171, "address": "Mini Zoo Warszawa, 19, Kolorowa, Stary Ursus, Skorosze, Ursus, Warszawa, województwo mazowieckie, 02-495, Polska", "desc": "Kozy, owce, kucyki, króliki. Małe, kameralne, bezpłatne. Idealne dla maluchów. 🐐"}, {"name": "Park Dolina Wkry Pomiechówek", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.4742364, "lon": 20.7345196, "address": "Park Dolina Wkry, Czarnowo, gmina Pomiechówek, powiat nowodworski, województwo mazowieckie, Polska", "desc": "Park krajobrazowy nad Wkrą — spacery, rowery, piknik. Świetny na dłuższą wycieczkę za miasto. 🌲"}, {"name": "Folwark Bródno", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.2818, "lon": 21.0433, "address": "Folwark Bródno", "desc": "Zwierzęta gospodarskie, sianokosy, warsztaty przyrodnicze. Kawałek wsi w mieście! 🐄"}, {"name": "Gospodarstwo Majlert", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.2208, "lon": 20.8143, "address": "Gospodarstwo Majlert", "desc": "Agroturystyka pod Warszawą — zwierzęta, ognisko, dynie jesienią. Blisko natury. 🐑"}, {"name": "Manufaktura Wedel", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2428, "lon": 21.0112, "address": "Manufaktura Wedel", "desc": "Słodka wycieczka do fabryki czekolady! Warsztaty zdobienia, degustacje, fontanna. Pycha! 🍫"}, {"name": "Majaland", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2354, "lon": 20.9657, "address": "Majaland", "desc": "Park rozrywki z Krecikiem — karuzele, zjeżdżalnie, dmuchańce. Wewnątrz, na każdą pogodę. 🎠"}, {"name": "Julinek", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2637, "lon": 20.6158, "address": "Julinek", "desc": "Park rozrywki pod Warszawą — dmuchańce, tyrolki, park linowy, zwierzęta. Mega atrakcja na cały dzień! 🎢"}, {"name": "Farma Iluzji", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 51.6560486, "lon": 21.692834, "address": "Farma Iluzji, 9, Mościska, gmina Trojanów, powiat garwoliński, województwo mazowieckie, 08-455, Polska", "desc": "Park iluzji — lustrzany labirynt, lewitujące przedmioty, pokój Amesa. Fantastyczna wycieczka! 🔮"}, {"name": "Dyniowa farma Powsin", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.1292, "lon": 21.1108, "address": "Dyniowa farma Powsin", "desc": "Sezonowa atrakcja — dynie, slajdy z siana, kukurydziany labirynt, ognisko. Jesienny must-see! 🎃"}, {"name": "Kolejkowo", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2317527, "lon": 21.0018922, "address": "Kolejkowo, 39, Sienna, Żelazna Brama, Śródmieście Północne, Śródmieście, Warszawa, województwo mazowieckie, 00-125, Pols", "desc": "Makieta kolejowa z miniaturowym światem — pociągi, miasteczka, góry. Dla fanów kolei! 🚂"}, {"name": "Warszawianka baseny", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.251000000000005, "lon": 21.0, "address": "NOT FOUND", "desc": "Park wodny — baseny, zjeżdżalnie, brodzik. Na deszczowy dzień lub letnie ochłodzenie. 🏊"}, {"name": "Miasteczko ruchu Sołtyka", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2454207, "lon": 20.9680845, "address": "8/10, Kajetana Sołtyka, Młynów, Wola, Warszawa, województwo mazowieckie, 01-163, Polska", "desc": "Miasteczko ruchu drogowego na Woli — samochodziki, znaki, skrzyżowania. Nauka przez zabawę! 🚦"}, {"name": "Park Linowy Łomianki", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.253, "lon": 21.0, "address": "NOT FOUND", "desc": "Trasy dla dzieci, tyrolki, siatki. Aktywna zabawa na wysokości w Łomiankach. 🧗"}, {"name": "LAS ODKRYWCÓW UŁĘŻE", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.254000000000005, "lon": 21.0, "address": "NOT FOUND", "desc": "Leśna ścieżka sensoryczna, wieża widokowa. Przyrodnicza przygoda w Ułęży. 🌲"}, {"name": "Parowozownia Skierniewice", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 51.9656581, "lon": 20.142548, "address": "Parowozownia Skierniewice, Łowicka, Skierniewka Prawa, Osiedle Makowska, Skierniewice, województwo łódzkie, 96-100, Pols", "desc": "Zabytkowa parowozownia — prawdziwe parowozy, przejażdżki, muzeum kolei. Dla fanów pociągów! 🚂"}, {"name": "Park Romantyczny Arkadia", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.0842143, "lon": 20.0147411, "address": "Park romantyczny, Arkadia-Parcela, Arkadia, gmina Nieborów, powiat łowicki, województwo łódzkie, 99-416, Polska", "desc": "Romantyczny park dworski — stawy, mostki, świątynia Diany. Przyrodniczy spacer. 🌿"}, {"name": "Fundacja Sto Pociech", "cat": "kawiarnie", "cat_label": "Kawiarnie i Relaks", "lat": 52.2520044, "lon": 21.0088079, "address": "Fundacja Sto Pociech, 20/24a, Freta, Staromiejskie, Nowe Miasto, Śródmieście, Warszawa, województwo mazowieckie, 00-227,", "desc": "Kawa, plac zabaw, warsztaty i konsultacje pedagogiczne w jednym. Społeczność rodziców! ☕"}, {"name": "Zizi Cafe", "cat": "kawiarnie", "cat_label": "Kawiarnie i Relaks", "lat": 52.2924279, "lon": 20.9401301, "address": "Zizi Cafe, Przy Agorze, Wrzeciono, Bielany, Warszawa, województwo mazowieckie, 01-960, Polska", "desc": "Kawiarnia przyjazna rodzinom — kącik zabaw, zdrowe jedzenie, pyszna kawa dla rodziców. 🧁"}];
+
+// ===== CATEGORY CONFIG =====
+const CAT_COLORS = {
+  sale_zabaw: '#8b5cf6',
+  place_zabaw: '#22d3ee',
+  muzea: '#34d399',
+  teatry: '#f472b6',
+  zwierzeta: '#a78bfa',
+  inne: '#fb923c',
+  kawiarnie: '#fbbf24'
+};
+
+const CAT_EMOJIS = {
+  sale_zabaw: '🎪',
+  place_zabaw: '🛝',
+  muzea: '🔬',
+  teatry: '🎭',
+  zwierzeta: '🐘',
+  inne: '🎡',
+  kawiarnie: '☕'
+};
+
+const CAT_LABELS = {
+  sale_zabaw: 'Sale Zabaw',
+  place_zabaw: 'Place Zabaw',
+  muzea: 'Muzea i Edukacja',
+  teatry: 'Teatry i Kultura',
+  zwierzeta: 'Zwierzęta i Przyroda',
+  inne: 'Inne Atrakcje',
+  kawiarnie: 'Kawiarnie i Relaks'
+};
+
+// ===== STATE =====
+let currentFilter = 'all';
+let currentSearch = '';
+let activeMarker = null;
+let map, markersLayer, markers = [];
+
+// ===== MAP INIT =====
+function initMap() {
+  map = L.map('map', {
+    center: [52.22, 21.02],
+    zoom: 12,
+    zoomControl: true,
+    attributionControl: false,
+    fadeAnimation: true,
+    zoomAnimation: true
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    noWrap: true
+  }).addTo(map);
+
+  markersLayer = L.layerGroup().addTo(map);
+  renderMarkers(PLACES);
+  fitMap(PLACES);
+  renderList(PLACES);
+}
+
+// ===== MARKER FACTORY =====
+function createMarkerIcon(cat) {
+  const color = CAT_COLORS[cat] || '#94a3b8';
+  const emoji = CAT_EMOJIS[cat] || '📍';
+  return L.divIcon({
+    className: '',
+    html: `<div class="custom-marker" style="background:${color};border-color:rgba(255,255,255,0.7);box-shadow:0 2px 12px ${color}55;">${emoji}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -22]
+  });
+}
+
+// ===== MARKERS RENDER =====
+function renderMarkers(places) {
+  markersLayer.clearLayers();
+  markers = [];
+
+  const filtered = filterData(places);
+
+  filtered.forEach((p, i) => {
+    const marker = L.marker([p.lat, p.lon], {
+      icon: createMarkerIcon(p.cat),
+      riseOnHover: true
+    });
+
+    const catLabel = CAT_LABELS[p.cat] || p.cat_label;
+    const catBadge = `<span class="popup-cat" style="background:${CAT_COLORS[p.cat]}22;color:${CAT_COLORS[p.cat]}">${CAT_EMOJIS[p.cat]} ${catLabel}</span>`;
+
+    const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
+
+    marker.bindPopup(`
+      <div>
+        <div class="popup-title">${p.name}</div>
+        ${catBadge}
+        <div class="popup-desc">${p.desc}</div>
+        <a href="${dirUrl}" target="_blank" class="popup-dir-btn">🗺️ Nawiguj</a>
+      </div>
+    `);
+
+    marker.on('click', () => {
+      activeMarker = marker;
+      highlightListItem(p.name);
+    });
+
+    markers.push({ marker, place: p });
+    markersLayer.addLayer(marker);
+  });
+}
+
+// ===== FIT MAP =====
+function fitMap(places) {
+  const filtered = filterData(places);
+  if (filtered.length === 0) return;
+  const bounds = L.latLngBounds(filtered.map(p => [p.lat, p.lon]));
+  if (filtered.length === 1) {
+    map.setView([filtered[0].lat, filtered[0].lon], 14);
+  } else {
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+  }
+}
+
+// ===== FILTER =====
+function filterData(places) {
+  return places.filter(p => {
+    if (currentFilter !== 'all' && p.cat !== currentFilter) return false;
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      const inName = p.name.toLowerCase().includes(q);
+      const inDesc = (p.desc || '').toLowerCase().includes(q);
+      const inCat = CAT_LABELS[p.cat].toLowerCase().includes(q);
+      if (!inName && !inDesc && !inCat) return false;
+    }
+    return true;
+  });
+}
+
+// ===== SIDEBAR LIST =====
+function renderList(places) {
+  const container = document.getElementById('placesList');
+  const filtered = filterData(places);
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;">😕 Brak miejsc spełniających kryteria</div>';
+    document.getElementById('countBadge').textContent = '0 miejsc';
+    document.getElementById('statsBar').innerHTML = '';
+    return;
+  }
+
+  // Stats
+  const counts = {};
+  filtered.forEach(p => { counts[p.cat] = (counts[p.cat] || 0) + 1; });
+  const statsHtml = Object.entries(counts).map(([cat, n]) =>
+    `<span class="stat-chip"><span style="color:${CAT_COLORS[cat]}">${CAT_EMOJIS[cat]}</span> <strong>${n}</strong> ${CAT_LABELS[cat]}</span>`
+  ).join('');
+  document.getElementById('statsBar').innerHTML = statsHtml;
+
+  document.getElementById('countBadge').textContent = `${filtered.length} miejsc`;
+
+  // List items
+  const html = filtered.map(p => {
+    const catColor = CAT_COLORS[p.cat];
+    return `<div class="place-item cat-${p.cat}" data-name="${p.name}" onclick="focusPlace('${p.name}')">
+      <div class="place-item-header">
+        <span class="place-item-name">${p.name}</span>
+        <span class="place-item-cat" style="background:${catColor}18;color:${catColor}">${CAT_EMOJIS[p.cat]} ${CAT_LABELS[p.cat]}</span>
+      </div>
+      <div class="place-item-desc">${p.desc}</div>
+    </div>`;
+  }).join('');
+  container.innerHTML = html;
+}
+
+// ===== FOCUS PLACE =====
+function focusPlace(name) {
+  const entry = markers.find(m => m.place.name === name);
+  if (!entry) return;
+
+  map.setView([entry.place.lat, entry.place.lon], 15, { animate: true });
+  entry.marker.openPopup();
+
+  if (activeMarker) {
+    activeMarker.closePopup();
+  }
+  activeMarker = entry.marker;
+  highlightListItem(name);
+}
+
+function highlightListItem(name) {
+  document.querySelectorAll('.place-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.name === name);
+  });
+  // Scroll into view
+  const el = document.querySelector(`.place-item[data-name="${name}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ===== FILTER / SEARCH =====
+function setFilter(cat) {
+  currentFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cat === cat);
+  });
+  applyFilters();
+}
+
+function filterPlaces() {
+  currentSearch = document.getElementById('searchInput').value;
+  applyFilters();
+}
+
+function applyFilters() {
+  const filtered = filterData(PLACES);
+  markersLayer.clearLayers();
+  renderMarkers(PLACES);
+  renderList(PLACES);
+  fitMap(PLACES);
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+    document.getElementById('searchInput').focus();
+    e.preventDefault();
+  }
+});
+
+// ===== BOOT =====
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+</body>
+</html>
