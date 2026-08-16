@@ -180,6 +180,41 @@ body {
   margin-bottom: 10px;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  background: var(--bg-dark);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: #1e293b;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -657,7 +692,7 @@ body {
       <span style="color:#64748b;">🔍</span>
       <input type="text" id="searchInput" placeholder="Szukaj miejsca..." oninput="filterPlaces()">
     </div>
-    <span class="count-badge" id="countBadge">59 miejsc</span>
+    <span class="count-badge" id="countBadge" data-suffix="miejsc">59 miejsc</span>
     <button id="themeToggle" class="theme-btn" onclick="toggleTheme()" title="Przełącz motyw">🌙</button>
   </div>
 </header>
@@ -668,6 +703,11 @@ body {
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
+      <!-- TABS -->
+      <div class="tabs" id="tabs">
+        <button class="tab-btn active" data-tab="places" onclick="switchTab('places')">🗺️ Warszawa</button>
+        <button class="tab-btn" data-tab="hotels" onclick="switchTab('hotels')">🏨 Hotele Polska</button>
+      </div>
       <div class="filter-title">📍 Kategorie</div>
       <div class="filters" id="filters">
         <button class="filter-btn active" data-cat="all" onclick="setFilter('all')">🏁 Wszystkie</button>
@@ -687,7 +727,7 @@ body {
   <!-- MAP -->
   <div class="map-container">
     <div id="map"></div>
-    <div class="map-legend">
+    <div class="map-legend" id="legendContainer">
       <div class="legend-title">Legenda</div>
       <div class="legend-item"><span class="legend-dot" style="background:var(--sale-zabaw)"></span> Sale Zabaw</div>
       <div class="legend-item"><span class="legend-dot" style="background:var(--place-zabaw)"></span> Place Zabaw</div>
@@ -704,50 +744,74 @@ body {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===== DATA =====
+// ===== DATA =====
 const PLACES = [{"name": "Smart Kids Planet", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2324352, "lon": 20.9911537, "address": "Smart Kids Planet, Edwarda Luckefielda, Fabryka Norblina, Mirów, Wola, Warszawa, województwo mazowieckie, 00-841, Polska", "desc": "Ogromna sala zabaw z wieloma strefami tematycznymi — sensoryka, konstrukcje, eksperymenty. Dla dzieci 0-10 lat. 🧠"}, {"name": "Bawialnia Dziupla", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.3410665, "lon": 21.0523904, "address": "Dziupla, Naturalna bawialnia, 9, Luciana Pavarottiego, Greenwood I, Kobiałka, Białołęka, Warszawa, województwo mazowieck", "desc": "Przytulna bawialnia z naturalnymi materiałami, drewnianymi zabawkami i kącikiem do odpoczynku. Kameralna atmosfera. 🪵"}, {"name": "Lumo sala zabaw", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2134, "lon": 21.0053, "address": "Lumo sala zabaw", "desc": "Nowoczesna sala zabaw z interaktywnymi projekcjami, świetlnymi instalacjami i strefami sensorycznymi. ✨"}, {"name": "Sensorysie", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2034471, "lon": 21.0213907, "address": "Sensorysie, 8, Różana, Stary Mokotów, Mokotów, Warszawa, województwo mazowieckie, 02-548, Polska", "desc": "Sala zabaw nastawiona na integrację sensoryczną — baseny z kulkami, ścianki wspinaczkowe, tory przeszkód. 🎯"}, {"name": "Hultajka sala zabaw", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2521504, "lon": 21.0332728, "address": "Hultajka, 6, Floriańska, Skaryszew, Stara Praga, Praga-Północ, Warszawa, województwo mazowieckie, 03-707, Polska", "desc": "Przestronna sala zabaw z ogromną konstrukcją do wspinania, zjeżdżalniami i basenem z kulkami. 🏰"}, {"name": "Minicity", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2559411, "lon": 21.0441028, "address": "Minicity, Pasaż Konesera, Koneser, Szmulowizna, Praga-Północ, Warszawa, województwo mazowieckie, 03-736, Polska", "desc": "Miasteczko edukacyjne, gdzie dzieci wcielają się w zawody — strażak, lekarz, kucharz. Zabawa i nauka! 👩‍🚒"}, {"name": "Klockownia", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.25, "lon": 21.0421, "address": "Klockownia", "desc": "Raj dla małych budowniczych — tysiące klocków, konstrukcje, warsztaty. LEGO, blocki, kreatywna zabawa! 🧱"}, {"name": "Airo", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.1755, "lon": 21.0108, "address": "Airo", "desc": "Nowoczesny park trampolin i strefa aktywności — skoki, akrobacje, tory przeszkód. Dla energicznych dzieciaków. 🤸"}, {"name": "Jungle Academy", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2241881, "lon": 20.9249358, "address": "Jungle Academy, Połczyńska, Ulrychów, Wola, Warszawa, województwo mazowieckie, 01-378, Polska", "desc": "Park przygód z dżunglą lin, ściankami wspinaczkowymi i przeszkodami. Dla odważnych odkrywców! 🦍"}, {"name": "Inka play blue city", "cat": "sale_zabaw", "cat_label": "Sale Zabaw", "lat": 52.2204, "lon": 20.9764, "address": "Inka play blue city", "desc": "Sala zabaw w Blue City — strefa malucha, zjeżdżalnie, baseny, ścianka wspinaczkowa. 🎪"}, {"name": "Łazienki Królewskie — wodny plac zabaw", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2126209, "lon": 21.0339496, "address": "Łazienki Królewskie, Śródmieście, Warszawa, województwo mazowieckie, 00-460, Polska", "desc": "Unikalny wodny plac zabaw przy Starej Oranżerii — strumyki, śluzy, pompki. Pałac na wodzie i przyroda. 🌊"}, {"name": "Plac zabaw w Parku Ujazdowskim", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2220389, "lon": 21.0257926, "address": "Park Ujazdowski, Śródmieście, Warszawa, województwo mazowieckie, 00-461, Polska", "desc": "Duży, nowoczesny plac zabaw w ścisłym centrum — zjeżdżalnie, huśtawki, karuzele, piaskownica. 🌳"}, {"name": "Wodny plac zabaw Wawer", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2400698, "lon": 21.1522941, "address": "1, Starego Doktora, Marysin Wawerski Północny, Marysin Wawerski, Wawer, Warszawa, województwo mazowieckie, 04-551, Polsk", "desc": "Plac zabaw z kurtynami wodnymi, pompkami i tamami. Przy ul. Starego Doktora 1. Idealny na upały! 💦"}, {"name": "Plac zabaw Ursynów dinozaury", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1596, "lon": 21.0457, "address": "Plac zabaw Ursynów dinozaury", "desc": "Kultowy plac zabaw z ogromnym dinozaurem! Liny, zjeżdżalnie — atrakcja dla małych paleontologów. 🦕"}, {"name": "Powsin plac zabaw", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1301728, "lon": 21.1139372, "address": "Rosochaty Park, Rosochata, Zamość, Powsin, Wilanów, Warszawa, województwo mazowieckie, 02-998, Polska", "desc": "Rozległy plac zabaw w Parku Powsin — nowe urządzenia, zjeżdżalnie, huśtawki, domek do wspinania. 🌲"}, {"name": "Plac zabaw przy Kinowej", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2430989, "lon": 21.0780621, "address": "Ulica Grenadierów, Grenadierów, Grochów-Kinowa, Grochów, Praga-Południe, Warszawa, województwo mazowieckie, 04-016, Pols", "desc": "Spokojny plac zabaw przy ul. Kinowej — dobra opcja dla młodszych dzieci w zielonej okolicy. 🏡"}, {"name": "Plac zabaw plac Wilsona", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2692619, "lon": 20.9844973, "address": "Plac Wilsona, Juliusza Słowackiego, Żoliborz Spółdzielczy, Stary Żoliborz, Żoliborz, Warszawa, województwo mazowieckie, ", "desc": "Popularny plac zabaw na Żoliborzu — dobra infrastruktura, dużo zieleni, rodzinna atmosfera. 🌻"}, {"name": "Pruszków plac zabaw Niepodległości", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1620811, "lon": 20.8045971, "address": "Aleja Niepodległości, Żbików, Pruszków, powiat pruszkowski, województwo mazowieckie, 05-803, Polska", "desc": "Duży, nowoczesny plac zabaw przy al. Niepodległości w Pruszkowie. Dla dzieci w różnym wieku. 🛝"}, {"name": "Proszę słonia Bielany", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2825947, "lon": 20.9335975, "address": "Stawy Brustmana, Wawrzyszew, Bielany, Warszawa, województwo mazowieckie, Polska", "desc": "Plac zabaw przy stawach Brustmana — drewniana konstrukcja, natura, zieleń. Idealny na spacer z zabawą. 🐘"}, {"name": "Szałas z drewna Otwock", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.1112, "lon": 21.2629, "address": "Szałas z drewna Otwock", "desc": "Drewniana konstrukcja szałasu — nietypowy, kreatywny plac zabaw z naturalnych materiałów. 🪵"}, {"name": "Plac zabaw Park Leśny Otwock", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.113, "lon": 21.2785, "address": "Plac zabaw Park Leśny Otwock", "desc": "Plac zabaw w lesie przy ul. Szkolnej 22. Świeże powietrze, otoczenie lasu, natura. 🌿"}, {"name": "Plac zabaw Park Młociński", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.3147504, "lon": 20.9267183, "address": "Park Młociński, Warszawa, województwo mazowieckie, Polska", "desc": "Plac zabaw w największym lesie Warszawy — połącz spacer z zabawą na świeżym powietrzu. 🍃"}, {"name": "Plac zabaw BCEK Bielany", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2903788, "lon": 20.9416543, "address": "Bielańskie Centrum Edukacji Kulturalnej, 9a, Szegedyńska, Brzeziny, Wrzeciono, Bielany, Warszawa, województwo mazowiecki", "desc": "Nowoczesny plac zabaw przy Bielańskim Centrum Edukacji Kulturalnej. Elementy edukacyjne na zewnątrz. 📚"}, {"name": "Bielany osiołek UKSW", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2962891, "lon": 20.958375, "address": "UKSW, Dewajtis, Las Bielański, Bielany, Warszawa, województwo mazowieckie, 01-815, Polska", "desc": "Drewniany plac zabaw przy UKSW z charakterystycznym osiołkiem. Dla okolicznych mieszkańców. 🐴"}, {"name": "Sulejówek plac zabaw Szklarniowa", "cat": "place_zabaw", "cat_label": "Place Zabaw", "lat": 52.2284433, "lon": 21.2606098, "address": "Szklarniowa, Osiedle Kasztanowa, Ratajewo, Sulejówek, powiat miński, województwo mazowieckie, 05-070, Polska", "desc": "Nowoczesny plac zabaw w Sulejówku przy ul. Szklarniowej. Zielona i spokojna okolica. 🌳"}, {"name": "Centrum Nauki Kopernik", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.241776, "lon": 21.0286002, "address": "Centrum Nauki Kopernik, 20, Wybrzeże Kościuszkowskie, Powiśle-Skarpa, Powiśle, Śródmieście, Warszawa, województwo mazowi", "desc": "Największe centrum nauki w Polsce! Interaktywne wystawy, planetarium, warsztaty. Obowiązkowe! 🔬"}, {"name": "Muzeum Iluzji", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2494363, "lon": 21.0116788, "address": "Muzeum Świat Iluzji, 21, Rynek Starego Miasta, Staromiejskie, Stare Miasto, Śródmieście, Warszawa, województwo mazowieck", "desc": "Triki optyczne, złudzenia i eksperymenty ze światłem. Fascynujące dla dzieci i dorosłych. 🎭"}, {"name": "Muzeum Historii Naturalnej PKiN", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2319, "lon": 21.0067, "address": "Muzeum Historii Naturalnej PKiN", "desc": "Szkielety dinozaurów, minerały i meteoryty w Pałacu Kultury i Nauki. Dla małych odkrywców! 🦖"}, {"name": "Muzeum Geologiczne", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2100299, "lon": 21.0126094, "address": "Muzeum Geologiczne, 4, Rakowiecka, Osiedle Batorego, Stary Mokotów, Mokotów, Warszawa, województwo mazowieckie, 02-518, ", "desc": "Skały, skamieniałości, diamenty, wulkany. Przy ul. Rakowieckiej. Wstęp wolny! 💎"}, {"name": "MSN warsztaty", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2331288, "lon": 21.0089838, "address": "Muzeum Sztuki Nowoczesnej, 103, Marszałkowska, Żelazna Brama, Śródmieście Północne, Śródmieście, Warszawa, województwo m", "desc": "Muzeum Sztuki Nowoczesnej — warsztaty rodzinne, zajęcia plastyczne. Rozwija kreatywność dzieci. 🎨"}, {"name": "Muzeum Narodowe warsztaty", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2316938, "lon": 21.0247708, "address": "Muzeum Narodowe w Warszawie, 3, Aleje Jerozolimskie, Powiśle-Solec, Śródmieście Południowe, Śródmieście, Warszawa, wojew", "desc": "Warsztaty rodzinne i oprowadzania dla dzieci wśród arcydzieł. Edukacja przez sztukę. 🖼️"}, {"name": "Król Maciuś Polin", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.2493716, "lon": 20.9931609, "address": "Muzeum Historii Żydów Polskich Polin, 6, Mordechaja Anielewicza, Muranów, Śródmieście, Warszawa, województwo mazowieckie", "desc": "Przestrzeń edukacyjna w Muzeum Polin — warsztaty, opowieści i zabawa. Mądra rozrywka. 📖"}, {"name": "Ścieżka Kampinos", "cat": "muzea", "cat_label": "Muzea i Edukacja", "lat": 52.3167, "lon": 20.5667, "address": "Ścieżka Kampinos", "desc": "Ścieżka edukacyjna w Puszczy Kampinoskiej — punkty obserwacyjne, tablice, natura w najlepszym wydaniu. 🦌"}, {"name": "Teatr Niewielki", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2324224, "lon": 21.1062545, "address": "teatr niewielki, Ostrobramska, Grochów-Południowy, Gocław, Praga-Południe, Warszawa, województwo mazowieckie, 04-175, Po", "desc": "Kameralny teatr dla dzieci z autorskimi spektaklami i interaktywnymi przedstawieniami. Małe grupy. 🎭"}, {"name": "Teatr Małego Widza", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2496936, "lon": 21.0139633, "address": "Teatr Małego Widza, 4, Jezuicka, Staromiejskie, Stare Miasto, Śródmieście, Warszawa, województwo mazowieckie, 00-281, Po", "desc": "Dedykowany najmłodszym (1-6 lat) — sensoryczne spektakle, bliski kontakt z aktorami. ❤️"}, {"name": "Teatr Baj", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2524956, "lon": 21.0346245, "address": "Baj, 28, Jagiellońska, Skaryszew, Stara Praga, Praga-Północ, Warszawa, województwo mazowieckie, 03-719, Polska", "desc": "Legendarny teatr lalek — jeden z najstarszych w Polsce. Klasyczne i współczesne spektakle. 🧸"}, {"name": "Teatr Guliwer", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.203278, "lon": 21.0197937, "address": "Guliwer, 16, Różana, Stary Mokotów, Mokotów, Warszawa, województwo mazowieckie, 02-548, Polska", "desc": "Teatr lalek z bogatym repertuarem. Piękne scenografie, mądre przedstawienia, przystępne ceny. 🎪"}, {"name": "Roma spektakle dla dzieci", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2274112, "lon": 21.0078118, "address": "Teatr Muzyczny \"Roma\", 49, Nowogrodzka, Koszyki, Śródmieście Południowe, Śródmieście, Warszawa, województwo mazowieckie,", "desc": "Musicale i spektakle na dużej scenie. Profesjonalna oprawa i niezapomniane przeżycia. 🌟"}, {"name": "Smykofonia", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2328, "lon": 21.021, "address": "Smykofonia", "desc": "Koncerty muzyczne dla dzieci — od klasyki po jazz. Dzieci grają, śpiewają i tańczą! 🎵"}, {"name": "Kleks magia kina", "cat": "teatry", "cat_label": "Teatry i Kultura", "lat": 52.2308, "lon": 21.0106, "address": "Kleks magia kina", "desc": "Interaktywne seanse filmowe, warsztaty animacji, kreatywne podejście do kina. 🎬"}, {"name": "Zoo Warszawa", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.2526292, "lon": 21.0296653, "address": "Park Praski 01, Aleja „Solidarności”, Praga I, Nowa Praga, Praga-Północ, Warszawa, województwo mazowieckie, 03-401, Pols", "desc": "Ogród Zoologiczny im. Żabińskich — słonie, żyrafy, foki, małpy. Klasyk warszawskich wycieczek! 🐘"}, {"name": "Mini zoo Ursus", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.1877389, "lon": 20.8909171, "address": "Mini Zoo Warszawa, 19, Kolorowa, Stary Ursus, Skorosze, Ursus, Warszawa, województwo mazowieckie, 02-495, Polska", "desc": "Kozy, owce, kucyki, króliki. Małe, kameralne, bezpłatne. Idealne dla maluchów. 🐐"}, {"name": "Park Dolina Wkry Pomiechówek", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.4742364, "lon": 20.7345196, "address": "Park Dolina Wkry, Czarnowo, gmina Pomiechówek, powiat nowodworski, województwo mazowieckie, Polska", "desc": "Park krajobrazowy nad Wkrą — spacery, rowery, piknik. Świetny na dłuższą wycieczkę za miasto. 🌲"}, {"name": "Folwark Bródno", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.2818, "lon": 21.0433, "address": "Folwark Bródno", "desc": "Zwierzęta gospodarskie, sianokosy, warsztaty przyrodnicze. Kawałek wsi w mieście! 🐄"}, {"name": "Gospodarstwo Majlert", "cat": "zwierzeta", "cat_label": "Zwierzęta i Przyroda", "lat": 52.2208, "lon": 20.8143, "address": "Gospodarstwo Majlert", "desc": "Agroturystyka pod Warszawą — zwierzęta, ognisko, dynie jesienią. Blisko natury. 🐑"}, {"name": "Manufaktura Wedel", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2428, "lon": 21.0112, "address": "Manufaktura Wedel", "desc": "Słodka wycieczka do fabryki czekolady! Warsztaty zdobienia, degustacje, fontanna. Pycha! 🍫"}, {"name": "Majaland", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2354, "lon": 20.9657, "address": "Majaland", "desc": "Park rozrywki z Krecikiem — karuzele, zjeżdżalnie, dmuchańce. Wewnątrz, na każdą pogodę. 🎠"}, {"name": "Julinek", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2637, "lon": 20.6158, "address": "Julinek", "desc": "Park rozrywki pod Warszawą — dmuchańce, tyrolki, park linowy, zwierzęta. Mega atrakcja na cały dzień! 🎢"}, {"name": "Farma Iluzji", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 51.6560486, "lon": 21.692834, "address": "Farma Iluzji, 9, Mościska, gmina Trojanów, powiat garwoliński, województwo mazowieckie, 08-455, Polska", "desc": "Park iluzji — lustrzany labirynt, lewitujące przedmioty, pokój Amesa. Fantastyczna wycieczka! 🔮"}, {"name": "Dyniowa farma Powsin", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.1292, "lon": 21.1108, "address": "Dyniowa farma Powsin", "desc": "Sezonowa atrakcja — dynie, slajdy z siana, kukurydziany labirynt, ognisko. Jesienny must-see! 🎃"}, {"name": "Kolejkowo", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2317527, "lon": 21.0018922, "address": "Kolejkowo, 39, Sienna, Żelazna Brama, Śródmieście Północne, Śródmieście, Warszawa, województwo mazowieckie, 00-125, Pols", "desc": "Makieta kolejowa z miniaturowym światem — pociągi, miasteczka, góry. Dla fanów kolei! 🚂"}, {"name": "Warszawianka baseny", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.251000000000005, "lon": 21.0, "address": "NOT FOUND", "desc": "Park wodny — baseny, zjeżdżalnie, brodzik. Na deszczowy dzień lub letnie ochłodzenie. 🏊"}, {"name": "Miasteczko ruchu Sołtyka", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.2454207, "lon": 20.9680845, "address": "8/10, Kajetana Sołtyka, Młynów, Wola, Warszawa, województwo mazowieckie, 01-163, Polska", "desc": "Miasteczko ruchu drogowego na Woli — samochodziki, znaki, skrzyżowania. Nauka przez zabawę! 🚦"}, {"name": "Park Linowy Łomianki", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.253, "lon": 21.0, "address": "NOT FOUND", "desc": "Trasy dla dzieci, tyrolki, siatki. Aktywna zabawa na wysokości w Łomiankach. 🧗"}, {"name": "LAS ODKRYWCÓW UŁĘŻE", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.254000000000005, "lon": 21.0, "address": "NOT FOUND", "desc": "Leśna ścieżka sensoryczna, wieża widokowa. Przyrodnicza przygoda w Ułęży. 🌲"}, {"name": "Parowozownia Skierniewice", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 51.9656581, "lon": 20.142548, "address": "Parowozownia Skierniewice, Łowicka, Skierniewka Prawa, Osiedle Makowska, Skierniewice, województwo łódzkie, 96-100, Pols", "desc": "Zabytkowa parowozownia — prawdziwe parowozy, przejażdżki, muzeum kolei. Dla fanów pociągów! 🚂"}, {"name": "Park Romantyczny Arkadia", "cat": "inne", "cat_label": "Inne Atrakcje", "lat": 52.0842143, "lon": 20.0147411, "address": "Park romantyczny, Arkadia-Parcela, Arkadia, gmina Nieborów, powiat łowicki, województwo łódzkie, 99-416, Polska", "desc": "Romantyczny park dworski — stawy, mostki, świątynia Diany. Przyrodniczy spacer. 🌿"}, {"name": "Fundacja Sto Pociech", "cat": "kawiarnie", "cat_label": "Kawiarnie i Relaks", "lat": 52.2520044, "lon": 21.0088079, "address": "Fundacja Sto Pociech, 20/24a, Freta, Staromiejskie, Nowe Miasto, Śródmieście, Warszawa, województwo mazowieckie, 00-227,", "desc": "Kawa, plac zabaw, warsztaty i konsultacje pedagogiczne w jednym. Społeczność rodziców! ☕"}, {"name": "Zizi Cafe", "cat": "kawiarnie", "cat_label": "Kawiarnie i Relaks", "lat": 52.2924279, "lon": 20.9401301, "address": "Zizi Cafe, Przy Agorze, Wrzeciono, Bielany, Warszawa, województwo mazowieckie, 01-960, Polska", "desc": "Kawiarnia przyjazna rodzinom — kącik zabaw, zdrowe jedzenie, pyszna kawa dla rodziców. 🧁"}];
 
-// ===== CATEGORY CONFIG =====
-const CAT_COLORS = {
-  sale_zabaw: '#8b5cf6',
-  place_zabaw: '#22d3ee',
-  muzea: '#34d399',
-  teatry: '#f472b6',
-  zwierzeta: '#a78bfa',
-  inne: '#fb923c',
-  kawiarnie: '#fbbf24'
-};
+const HOTELS = [{"name": "Hotel Zalesie Spa", "cat": "mazury", "lat": 53.8305116, "lon": 20.7380631, "address": "Zalesie Mazury Active SPA, 12, Zalesie, gmina Barczewo, powiat olsztyński, województwo warmińsko-mazurskie, 11-010, Pols", "desc": "Luksusowy hotel SPA nad jeziorem Zalesickim — baseny, aquapark, animacje dla dzieci, strefa SPA. Idealny na rodzinny wypoczynek. 🏊", "cat_label": "Mazury"}, {"name": "Gołębiewski Mikołajki", "cat": "mazury", "lat": 53.8045785, "lon": 21.5584251, "address": "Hotel Gołębiewski, 34, Mrągowska, Mikołajki, gmina Mikołajki, powiat mrągowski, województwo warmińsko-mazurskie, 11-730,", "desc": "Ogromny hotel z aquaparkiem, basenami i zjeżdżalniami. Mega resort nad jeziorem Tałty. 🛝", "cat_label": "Mazury"}, {"name": "Lake Hill Ostróda", "cat": "mazury", "lat": 53.7074366, "lon": 19.9440148, "address": "Lake Hill Mazury Resort&SPA, Turystyczna, Osiedle Mrongowiusza, Ostróda, powiat ostródzki, województwo warmińsko-mazursk", "desc": "Nowoczesny resort nad jeziorem Drwęckim — plaża, rowery, animacje. Kameralny i rodzinny. 🚲", "cat_label": "Mazury"}, {"name": "Hotel Narvil", "cat": "pod_warszawa", "lat": 52.4970546, "lon": 21.0667282, "address": "Hotel Narvil Conference & Spa, 14a, Czesława Miłosza, Serock, gmina Serock, powiat legionowski, województwo mazowieckie,", "desc": "Duży hotel z aquaparkiem w Serocku — baseny, zjeżdżalnie, SPA. Blisko Warszawy. 🌊", "cat_label": "Pod Warszawą"}, {"name": "Hotel Warszawianka", "cat": "pod_warszawa", "lat": 52.439, "lon": 21.1649, "address": "NOT FOUND", "desc": "Hotel nad zalewem Zegrzyńskim — plaża, sporty wodne, baseny. Idealny na weekend pod Warszawą. ⛵", "cat_label": "Pod Warszawą"}, {"name": "Las Woda Wilga", "cat": "pod_warszawa", "lat": 51.8438667, "lon": 21.4369655, "address": "Park Rekreacyjno - Biznesowy Las Woda, 1, Spokojna, Osiedle Wilga, gmina Wilga, powiat garwoliński, województwo mazowiec", "desc": "Eko-resort nad Wilgą — domki, baseny, las, zwierzęta. 40 min od Warszawy. 🌲", "cat_label": "Pod Warszawą"}, {"name": "Folwark Łochów", "cat": "pod_warszawa", "lat": 52.5152636, "lon": 21.6993194, "address": "Folwark Łochów, 10, Marii Konopnickiej, Łochów-Wieś, Łochów, gmina Łochów, powiat węgrowski, województwo mazowieckie, 07", "desc": "Agroturystyka z duszą — zwierzęta, ognisko, sianokosy, wiejskie atrakcje. Prawdziwy folwark. 🐄", "cat_label": "Pod Warszawą"}, {"name": "Hotel Aries Szczyrk", "cat": "gory", "lat": 49.7160849, "lon": 19.0187276, "address": "Aries Hotel & Spa Szczyrk, Górska, Górka, Szczyrk, powiat bielski, województwo śląskie, 43-370, Polska", "desc": "Czterogwiazdkowy hotel w Szczyrku — basen, SPA, aquapark, trasy narciarskie i rowerowe. ⛷️", "cat_label": "Góry"}, {"name": "Hotel Aries Zakopane", "cat": "gory", "lat": 49.2942623, "lon": 19.9493887, "address": "Aries Hotel, 5, Mariusza Zaruskiego, Osiedle Kasprusie, Zakopane, powiat tatrzański, województwo małopolskie, 34-500, Po", "desc": "Luksusowy hotel z basenem panoramicznym i widokiem na Tatry. SPA i atrakcje dla dzieci. 🏔️", "cat_label": "Góry"}, {"name": "Nosalowy Dwór", "cat": "gory", "lat": 49.2849606, "lon": 19.9872458, "address": "Nosalowy Dwór, 21d, Oswalda Balzera, Bory, Zakopane, powiat tatrzański, województwo małopolskie, 34-500, Polska", "desc": "Hotel u podnóża Nosala — basen, SPA, animacje, blisko Krupówek. Dobry stosunek jakości do ceny. 🏨", "cat_label": "Góry"}, {"name": "En Hotel Zakopane", "cat": "gory", "lat": 49.2955, "lon": 19.958, "address": "NOT FOUND", "desc": "Nowoczesny butikowy hotel — strefa relaksu, blisko natury, rodzinna atmosfera. ✨", "cat_label": "Góry"}, {"name": "Wisła Crystal Mountain", "cat": "gory", "lat": 49.6662025, "lon": 18.8558666, "address": "Crystal Mountain, Bukowa, Uzdrowisko, Jawornik, Wisła, powiat cieszyński, województwo śląskie, 46-460, Polska", "desc": "Hotel górski w Wiśle — aquapark, SPA, baseny, widok na Beskidy. Całoroczna baza wypadowa. 🏔️", "cat_label": "Góry"}, {"name": "Białka Bania", "cat": "gory", "lat": 49.3885399, "lon": 20.0992181, "address": "Bania Hotel, family DH, Środkowa, Białka Tatrzańska, gmina Bukowina Tatrzańska, powiat tatrzański, województwo małopolsk", "desc": "Hotel przy stoku Bania — baseny termalne, SPA, narty, rowery. Idealny na aktywny wypoczynek. ⛷️", "cat_label": "Góry"}, {"name": "Kołobrzeg Aquarius", "cat": "morze", "lat": 54.1829473, "lon": 15.5919224, "address": "Apartamenty Aquarius, 15, Aleksandra Fredry, Solne Zdroje, Kołobrzeg, powiat kołobrzeski, województwo zachodniopomorskie", "desc": "Hotel nad morzem z ogromnym aquaparkiem — baseny, zjeżdżalnie, SPA, blisko plaży. 🌊", "cat_label": "Morze"}, {"name": "Grand Lubicz Ustka", "cat": "morze", "lat": 54.5844189, "lon": 16.8694699, "address": "Hotel Grand Lubicz, 4, Wczasowa, Grabienko, Ustka, powiat słupski, województwo pomorskie, 76-270, Polska", "desc": "Wielki resort nad Bałtykiem — aquapark, baseny, atrakcje dla dzieci, SPA. 🏖️", "cat_label": "Morze"}, {"name": "Saltic Łeba", "cat": "morze", "lat": 54.767466, "lon": 17.588598, "address": "Saltic Resort & Spa Łeba, Wejście 8, Łeba, powiat lęborski, województwo pomorskie, 84-360, Polska", "desc": "Nowoczesny hotel w Łebie — basen, SPA, blisko plaży i ruchomych wydm. 🏖️", "cat_label": "Morze"}, {"name": "4winds Krynica Morska", "cat": "morze", "lat": 54.3784, "lon": 19.4163, "address": "NOT FOUND", "desc": "Hotel z widokiem na Zalew Wiślany — spa, basen, rowery, blisko plaży. ⛵", "cat_label": "Morze"}, {"name": "Bursztynowe Resort & Spa Stegny", "cat": "morze", "lat": 54.3296, "lon": 19.1395, "address": "NOT FOUND", "desc": "Resort nad morzem — baseny, SPA, animacje, domki i pokoje. Idealny na rodzinne wakacje. 🐚", "cat_label": "Morze"}, {"name": "Radisson Sopot", "cat": "morze", "lat": 54.4330507, "lon": 18.5802467, "address": "Hotel Radisson Blu Sopot, 54, Bitwy pod Płowcami, Karlikowo, Sopot, województwo pomorskie, 81-731, Polska", "desc": "Luksusowy hotel przy sopockim molo — aquapark, SPA, widok na morze. 🏨", "cat_label": "Morze"}, {"name": "Jastarnia Dom Zdrojowy", "cat": "morze", "lat": 54.6999071, "lon": 18.6828415, "address": "Dom Zdrojowy, 2A, Zdrojowa, Jastarnia, gmina Jastarnia, powiat pucki, województwo pomorskie, 84-140, Polska", "desc": "Hotel w sercu Jastarni — blisko plaży, basen, SPA, Półwysep Helski. 🏖️", "cat_label": "Morze"}, {"name": "Hotel Zamek Łeba", "cat": "morze", "lat": 54.7679929, "lon": 17.5635185, "address": "Zamek Łeba, Wejście 17, Łeba, powiat lęborski, województwo pomorskie, 94-360, Polska", "desc": "Hotel w stylu zamkowym w Łebie — basen, SPA, blisko ruchomych wydm. 🏰", "cat_label": "Morze"}, {"name": "Hotel Bonifacio", "cat": "inne_hotele", "lat": 52.7149617, "lon": 20.408807, "address": "BoniFaCio, Jesionowa, Sadek, gmina Glinojeck, powiat ciechanowski, województwo mazowieckie, 06-452, Polska", "desc": "Hotel w malowniczej okolicy — spokój, natura, atrakcje dla rodzin. 🌿", "cat_label": "Pozostałe"}, {"name": "Bińkowski Kielce", "cat": "inne_hotele", "lat": 50.8538845, "lon": 20.6089041, "address": "Binkowski Resort, 42, Wojciecha Szczepaniaka, Park Sosnowy, Stadion, Kielce, województwo świętokrzyskie, 25-118, Polska", "desc": "Hotel w Kielcach — basen, SPA, blisko Gór Świętokrzyskich. Baza wypadowa na szlaki. 🥾", "cat_label": "Pozostałe"}, {"name": "Sielanka Pilica Hotel", "cat": "inne_hotele", "lat": 51.7709014, "lon": 21.1705044, "address": "Sielanka nad Pilicą, Bielany, Warka, gmina Warka, powiat grójecki, województwo mazowieckie, Polska", "desc": "Hotel nad Pilicą — przyroda, kajaki, rowery, ognisko. Wiejski klimat nad rzeką. 🛶", "cat_label": "Pozostałe"}, {"name": "Cukrownia Żnin", "cat": "inne_hotele", "lat": 52.8502114, "lon": 17.7374981, "address": "Cukrownia Żnin, Dworcowa, Żnin, gmina Żnin, powiat żniński, województwo kujawsko-pomorskie, 88-400, Polska", "desc": "Unikalny hotel w zabytkowej cukrowni — industrialny klimat, SPA, okolice Pałuk. 🏭", "cat_label": "Pozostałe"}, {"name": "Pensjonat Uroczysko Zaborek", "cat": "inne_hotele", "lat": 52.1787933, "lon": 23.2080248, "address": "Uroczysko Zaborek, Kolonia, Zaborek, Janów Podlaski, gmina Janów Podlaski, powiat bialski, województwo lubelskie, 21-505", "desc": "Kameralny pensjonat na Podlasiu — cisza, przyroda, konie, ognisko. Prawdziwy odpoczynek. 🌳", "cat_label": "Pozostałe"}, {"name": "Arłamów", "cat": "inne_hotele", "lat": 49.5918121, "lon": 22.6281221, "address": "Hotel Arłamów, 1, Arłamów, gmina Ustrzyki Dolne, powiat bieszczadzki, województwo podkarpackie, 38-712, Polska", "desc": "Luksusowy hotel w Bieszczadach — aquapark, SPA, pole golfowe, atrakcje dla dzieci. Ogromny resort! 🏌️", "cat_label": "Pozostałe"}, {"name": "Dolina Charlotty", "cat": "inne_hotele", "lat": 54.5248193, "lon": 16.9538965, "address": "Dolina Charlotty, Zamełowo, Strzelinko, gmina Redzikowo, powiat słupski, województwo pomorskie, Polska", "desc": "Hotel z zoo, aquaparkiem i SPA — miniaturowe zoo, baseny, dmuchańce. Dziecięcy raj! 🐒", "cat_label": "Pozostałe"}, {"name": "Hotel Artus Sowia Dolina", "cat": "inne_hotele", "lat": 50.446, "lon": 16.6625, "address": "NOT FOUND", "desc": "Hotel w Kotlinie Kłodzkiej — basen, SPA, blisko górskich szlaków. Spokojny wypoczynek. 🏔️", "cat_label": "Pozostałe"}, {"name": "Rosevie Resort", "cat": "inne_hotele", "lat": 53.8, "lon": 20.5, "address": "NOT FOUND", "desc": "Nowoczesny resort wellness — basen, SPA, dobre jedzenie, eleganckie wnętrza. 🌹", "cat_label": "Pozostałe"}, {"name": "Notera Bory Tucholskie", "cat": "inne_hotele", "lat": 53.6552, "lon": 17.8759, "address": "NOT FOUND", "desc": "Hotel w sercu Borów Tucholskich — las, jezioro, rowery, kajaki. Dla miłośników natury. 🌲", "cat_label": "Pozostałe"}, {"name": "Puro Hotel Kazimierz", "cat": "inne_hotele", "lat": 51.322, "lon": 21.947, "address": "NOT FOUND", "desc": "Designerski hotel w Kazimierzu Dolnym — stylowe wnętrza, dobra kuchnia. 🎨", "cat_label": "Pozostałe"}, {"name": "Carska Białowieża", "cat": "inne_hotele", "lat": 52.690184, "lon": 23.8734918, "address": "Restauracja Carska, 4, Stacja Towarowa, Podolany Drugie, Białowieża, gmina Białowieża, powiat hajnowski, województwo pod", "desc": "Stylowy hotel w Puszczy Białowieskiej — blisko żubrów, przyroda na wyciągnięcie ręki. 🦌", "cat_label": "Pozostałe"}, {"name": "Park Dyrekcyjny Białowieża", "cat": "inne_hotele", "lat": 52.6996, "lon": 23.855, "address": "NOT FOUND", "desc": "Hotel w sercu Puszczy Białowieskiej — spacery, rowery, Rezerwat Pokazowy Żubrów. 🌲", "cat_label": "Pozostałe"}];
 
-const CAT_EMOJIS = {
-  sale_zabaw: '🎪',
-  place_zabaw: '🛝',
-  muzea: '🔬',
-  teatry: '🎭',
-  zwierzeta: '🐘',
-  inne: '🎡',
-  kawiarnie: '☕'
-};
+const ALL_DATA = { places: PLACES, hotels: HOTELS };
 
-const CAT_LABELS = {
-  sale_zabaw: 'Sale Zabaw',
-  place_zabaw: 'Place Zabaw',
-  muzea: 'Muzea i Edukacja',
-  teatry: 'Teatry i Kultura',
-  zwierzeta: 'Zwierzęta i Przyroda',
-  inne: 'Inne Atrakcje',
-  kawiarnie: 'Kawiarnie i Relaks'
+// ===== TAB CONFIG =====
+const TAB_CONFIG = {
+  places: {
+    filters: [
+      { cat: 'all', label: '🏁 Wszystkie' },
+      { cat: 'sale_zabaw', label: '🎪 Sale Zabaw' },
+      { cat: 'place_zabaw', label: '🛝 Place Zabaw' },
+      { cat: 'muzea', label: '🔬 Muzea' },
+      { cat: 'teatry', label: '🎭 Teatry' },
+      { cat: 'zwierzeta', label: '🐘 Zwierzęta' },
+      { cat: 'kawiarnie', label: '☕ Kawiarnie' },
+      { cat: 'inne', label: '🎡 Inne' }
+    ],
+    colors: { sale_zabaw:'#8b5cf6', place_zabaw:'#22d3ee', muzea:'#34d399', teatry:'#f472b6', zwierzeta:'#a78bfa', inne:'#fb923c', kawiarnie:'#fbbf24' },
+    emojis: { sale_zabaw:'🎪', place_zabaw:'🛝', muzea:'🔬', teatry:'🎭', zwierzeta:'🐘', inne:'🎡', kawiarnie:'☕' },
+    labels: { sale_zabaw:'Sale Zabaw', place_zabaw:'Place Zabaw', muzea:'Muzea i Edukacja', teatry:'Teatry i Kultura', zwierzeta:'Zwierzęta i Przyroda', inne:'Inne Atrakcje', kawiarnie:'Kawiarnie i Relaks' },
+    legend: [
+      {color:'#8b5cf6',label:'Sale Zabaw'},{color:'#22d3ee',label:'Place Zabaw'},{color:'#34d399',label:'Muzea'},
+      {color:'#f472b6',label:'Teatry'},{color:'#a78bfa',label:'Zwierzęta'},{color:'#fb923c',label:'Inne'},{color:'#fbbf24',label:'Kawiarnie'}
+    ],
+    categoryLabel:'📍 Kategorie', countSuffix:'miejsc', center:[52.22,21.02], zoom:12
+  },
+  hotels: {
+    filters: [
+      { cat: 'all', label: '🏁 Wszystkie' },
+      { cat: 'mazury', label: '🌊 Mazury' },
+      { cat: 'pod_warszawa', label: '🏙️ Pod Warszawą' },
+      { cat: 'gory', label: '🏔️ Góry' },
+      { cat: 'morze', label: '🏖️ Morze' },
+      { cat: 'inne_hotele', label: '📍 Pozostałe' }
+    ],
+    colors: { mazury:'#3b82f6', pod_warszawa:'#22d3ee', gory:'#10b981', morze:'#f59e0b', inne_hotele:'#94a3b8' },
+    emojis: { mazury:'🌊', pod_warszawa:'🏙️', gory:'🏔️', morze:'🏖️', inne_hotele:'📍' },
+    labels: { mazury:'Mazury', pod_warszawa:'Pod Warszawą', gory:'Góry', morze:'Morze', inne_hotele:'Pozostałe' },
+    legend: [
+      {color:'#3b82f6',label:'Mazury'},{color:'#22d3ee',label:'Pod Warszawą'},{color:'#10b981',label:'Góry'},
+      {color:'#f59e0b',label:'Morze'},{color:'#94a3b8',label:'Pozostałe'}
+    ],
+    categoryLabel:'🏨 Region', countSuffix:'hoteli', center:[52.15,19.35], zoom:7
+  }
 };
 
 // ===== STATE =====
+let currentTab = 'places';
 let currentFilter = 'all';
 let currentSearch = '';
 let activeMarker = null;
 let map, markersLayer, markers = [], tileLayer;
 
+// ===== HELPERS =====
+function getActiveData() { return ALL_DATA[currentTab]; }
+function getCfg() { return TAB_CONFIG[currentTab]; }
+const CAT_COLORS = () => getCfg().colors;
+const CAT_EMOJIS = () => getCfg().emojis;
+const CAT_LABELS = () => getCfg().labels;
+
 // ===== MAP INIT =====
 function initMap() {
   map = L.map('map', {
-    center: [52.22, 21.02],
-    zoom: 12,
+    center: getCfg().center,
+    zoom: getCfg().zoom,
     zoomControl: true,
     attributionControl: false,
     fadeAnimation: true,
@@ -760,15 +824,15 @@ function initMap() {
   }).addTo(map);
 
   markersLayer = L.layerGroup().addTo(map);
-  renderMarkers(PLACES);
-  fitMap(PLACES);
-  renderList(PLACES);
+  renderMarkers(getActiveData());
+  fitMap(getActiveData());
+  renderList(getActiveData());
 }
 
 // ===== MARKER FACTORY =====
 function createMarkerIcon(cat) {
-  const color = CAT_COLORS[cat] || '#94a3b8';
-  const emoji = CAT_EMOJIS[cat] || '📍';
+  const color = CAT_COLORS()[cat] || '#94a3b8';
+  const emoji = CAT_EMOJIS()[cat] || '📍';
   return L.divIcon({
     className: '',
     html: `<div class="custom-marker" style="background:${color};border-color:rgba(255,255,255,0.7);box-shadow:0 2px 12px ${color}55;">${emoji}</div>`,
@@ -791,8 +855,8 @@ function renderMarkers(places) {
       riseOnHover: true
     });
 
-    const catLabel = CAT_LABELS[p.cat] || p.cat_label;
-    const catBadge = `<span class="popup-cat" style="background:${CAT_COLORS[p.cat]}22;color:${CAT_COLORS[p.cat]}">${CAT_EMOJIS[p.cat]} ${catLabel}</span>`;
+    const catLabel = CAT_LABELS()[p.cat] || p.cat_label;
+    const catBadge = `<span class="popup-cat" style="background:${CAT_COLORS()[p.cat]}22;color:${CAT_COLORS()[p.cat]}">${CAT_EMOJIS()[p.cat]} ${catLabel}</span>`;
 
     const dirUrl = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
 
@@ -835,7 +899,7 @@ function filterData(places) {
       const q = currentSearch.toLowerCase();
       const inName = p.name.toLowerCase().includes(q);
       const inDesc = (p.desc || '').toLowerCase().includes(q);
-      const inCat = CAT_LABELS[p.cat].toLowerCase().includes(q);
+      const inCat = CAT_LABELS()[p.cat].toLowerCase().includes(q);
       if (!inName && !inDesc && !inCat) return false;
     }
     return true;
@@ -849,7 +913,8 @@ function renderList(places) {
 
   if (filtered.length === 0) {
     container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;">😕 Brak miejsc spełniających kryteria</div>';
-    document.getElementById('countBadge').textContent = '0 miejsc';
+    const suffix = document.getElementById('countBadge').dataset.suffix || 'miejsc';
+    document.getElementById('countBadge').textContent = `0 ${suffix}`;
     document.getElementById('statsBar').innerHTML = '';
     return;
   }
@@ -858,19 +923,20 @@ function renderList(places) {
   const counts = {};
   filtered.forEach(p => { counts[p.cat] = (counts[p.cat] || 0) + 1; });
   const statsHtml = Object.entries(counts).map(([cat, n]) =>
-    `<span class="stat-chip"><span style="color:${CAT_COLORS[cat]}">${CAT_EMOJIS[cat]}</span> <strong>${n}</strong> ${CAT_LABELS[cat]}</span>`
+    `<span class="stat-chip"><span style="color:${CAT_COLORS()[cat]}">${CAT_EMOJIS()[cat]}</span> <strong>${n}</strong> ${CAT_LABELS()[cat]}</span>`
   ).join('');
   document.getElementById('statsBar').innerHTML = statsHtml;
 
-  document.getElementById('countBadge').textContent = `${filtered.length} miejsc`;
+  const suffix = document.getElementById('countBadge').dataset.suffix || 'miejsc';
+  document.getElementById('countBadge').textContent = `${filtered.length} ${suffix}`;
 
   // List items
   const html = filtered.map(p => {
-    const catColor = CAT_COLORS[p.cat];
+    const catColor = CAT_COLORS()[p.cat];
     return `<div class="place-item cat-${p.cat}" data-name="${p.name}" onclick="focusPlace('${p.name}')">
       <div class="place-item-header">
         <span class="place-item-name">${p.name}</span>
-        <span class="place-item-cat" style="background:${catColor}18;color:${catColor}">${CAT_EMOJIS[p.cat]} ${CAT_LABELS[p.cat]}</span>
+        <span class="place-item-cat" style="background:${catColor}18;color:${catColor}">${CAT_EMOJIS()[p.cat]} ${CAT_LABELS()[p.cat]}</span>
       </div>
       <div class="place-item-desc">${p.desc}</div>
     </div>`;
@@ -917,11 +983,11 @@ function filterPlaces() {
 }
 
 function applyFilters() {
-  const filtered = filterData(PLACES);
+  const filtered = filterData(getActiveData());
   markersLayer.clearLayers();
-  renderMarkers(PLACES);
-  renderList(PLACES);
-  fitMap(PLACES);
+  renderMarkers(getActiveData());
+  renderList(getActiveData());
+  fitMap(getActiveData());
 }
 
 // Keyboard shortcut
@@ -967,6 +1033,41 @@ document.addEventListener('DOMContentLoaded', () => {
   initMap();
   loadTheme();
 });
+
+// ===== TAB SWITCH =====
+function switchTab(tab) {
+  currentTab = tab;
+  currentFilter = 'all';
+  currentSearch = '';
+  document.getElementById('searchInput').value = '';
+  
+  // Update tab buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  
+  // Rebuild filter buttons
+  const cfg = getCfg();
+  const filterContainer = document.getElementById('filters');
+  filterContainer.innerHTML = cfg.filters.map(f =>
+    `<button class="filter-btn active" data-cat="${f.cat}" onclick="setFilter('${f.cat}')">${f.label}</button>`
+  ).join('');
+  
+  // Update category label
+  document.querySelector('.filter-title').textContent = cfg.categoryLabel;
+  
+  // Update legend
+  const legend = document.getElementById('legendContainer');
+  legend.innerHTML = cfg.legend.map(l =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${l.color}"></span> ${l.label}</div>`
+  ).join('');
+  
+  // Update count suffix
+  document.getElementById('countBadge').dataset.suffix = cfg.countSuffix;
+  
+  // Re-render
+  applyFilters();
+}
 </script>
 </body>
 </html>
